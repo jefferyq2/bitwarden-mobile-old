@@ -1,0 +1,147 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
+using System.Resources;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Bit.Core.Abstractions;
+using bw.lib.Resources;
+
+namespace bw.lib.Services
+{
+    public class CliI18nService : II18nService
+    {
+        private const string ResourceId = "bw.lib.Resources.AppResources";
+
+        private static readonly Lazy<ResourceManager> _resourceManager = new Lazy<ResourceManager>(() =>
+            new ResourceManager(ResourceId, IntrospectionExtensions.GetTypeInfo(typeof(CliI18nService)).Assembly));
+
+        private readonly CultureInfo _defaultCulture = new CultureInfo("en-US");
+        private bool _inited;
+        private StringComparer _stringComparer;
+        private Dictionary<string, string> _localeNames;
+
+        public CliI18nService(CultureInfo systemCulture)
+        {
+            Culture = systemCulture;
+        }
+
+        public CultureInfo Culture { get; set; }
+        public StringComparer StringComparer
+        {
+            get
+            {
+                if (_stringComparer == null)
+                {
+                    _stringComparer = StringComparer.Create(Culture, false);
+                }
+                return _stringComparer;
+            }
+        }
+        public Dictionary<string, string> LocaleNames
+        {
+            get
+            {
+                if (_localeNames == null)
+                {
+                    _localeNames = new Dictionary<string, string>
+                    {
+                        ["af"] = "Afrikaans",
+                        ["bg"] = "български",
+                        ["ca"] = "català",
+                        ["cs"] = "čeština",
+                        ["da"] = "dansk",
+                        ["de"] = "Deutsch",
+                        ["el"] = "Ελληνικά",
+                        ["en"] = "English",
+                        ["en-GB"] = "English (British)",
+                        ["eo"] = "Esperanto",
+                        ["es"] = "español",
+                        ["et"] = "eesti",
+                        ["fa"] = "فارسی",
+                        ["fi"] = "suomi",
+                        ["fr"] = "français",
+                        ["he"] = "עברית",
+                        ["hi"] = "हिन्दी",
+                        ["hr"] = "hrvatski",
+                        ["hu"] = "magyar",
+                        ["id"] = "Bahasa Indonesia",
+                        ["it"] = "italiano",
+                        ["ja"] = "日本語",
+                        ["ko"] = "한국어",
+                        ["nb"] = "norsk (bokmål)",
+                        ["nl"] = "Nederlands",
+                        ["pl"] = "polski",
+                        ["pt-BR"] = "português do Brasil",
+                        ["pt-PT"] = "português",
+                        ["ro"] = "română",
+                        ["ru"] = "русский",
+                        ["sk"] = "slovenčina",
+                        ["sv"] = "svenska",
+                        ["th"] = "ไทย",
+                        ["tr"] = "Türkçe",
+                        ["uk"] = "українська",
+                        ["vi"] = "Tiếng Việt",
+                        ["zh-CN"] = "中文（中国大陆）",
+                        ["zh-TW"] = "中文（台灣）"
+                    };
+                }
+                return _localeNames;
+            }
+        }
+
+        public void Init(CultureInfo culture = null)
+        {
+            if (_inited)
+            {
+                throw new Exception("I18n already inited.");
+            }
+            _inited = true;
+            if (culture != null)
+            {
+                Culture = culture;
+            }
+            AppResources.Culture = Culture;
+            Thread.CurrentThread.CurrentCulture = Culture;
+            Thread.CurrentThread.CurrentUICulture = Culture;
+        }
+
+        public string T(string id, string p1 = null, string p2 = null, string p3 = null)
+        {
+            return Translate(id, p1, p2, p3);
+        }
+
+        public string Translate(string id, string p1 = null, string p2 = null, string p3 = null)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return string.Empty;
+            }
+            var result = _resourceManager.Value.GetString(id, Culture);
+            if (result == null)
+            {
+                result = _resourceManager.Value.GetString(id, _defaultCulture);
+                if (result == null)
+                {
+                    result = $"{{{id}}}";
+                }
+            }
+            if (p1 == null && p2 == null && p3 == null)
+            {
+                return result;
+            }
+            else if (p2 == null && p3 == null)
+            {
+                return string.Format(result, p1);
+            }
+            else if (p3 == null)
+            {
+                return string.Format(result, p1, p2);
+            }
+            return string.Format(result, p1, p2, p3);
+        }
+    }
+}
