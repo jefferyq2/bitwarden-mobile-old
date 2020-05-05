@@ -17,11 +17,14 @@ namespace Bit.Core.Services
 {
     public class ApiService : IApiService
     {
+        public static bool GlobalIgnoreCertErrors { get; set; }
+
         private readonly JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         };
-        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClientHandler _httpClientHandler;
+        private readonly HttpClient _httpClient;
         private readonly ITokenService _tokenService;
         private readonly IPlatformUtilsService _platformUtilsService;
         private readonly Func<bool, Task> _logoutCallbackAsync;
@@ -30,12 +33,31 @@ namespace Bit.Core.Services
             ITokenService tokenService,
             IPlatformUtilsService platformUtilsService,
             Func<bool, Task> logoutCallbackAsync,
-            string customUserAgent = null)
+            string customUserAgent = null,
+            bool? ignoreCertErrors = null)
         {
             _tokenService = tokenService;
             _platformUtilsService = platformUtilsService;
             _logoutCallbackAsync = logoutCallbackAsync;
             var device = (int)_platformUtilsService.GetDevice();
+
+            if (ignoreCertErrors ?? GlobalIgnoreCertErrors)
+            {
+                _httpClientHandler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (mg, ct, ch, er) => true,
+                    //SslProtocols =
+                    //    System.Security.Authentication.SslProtocols.Tls |
+                    //    System.Security.Authentication.SslProtocols.Tls11 |
+                    //    System.Security.Authentication.SslProtocols.Tls12,
+                };
+                _httpClient = new HttpClient(_httpClientHandler);
+            }
+            else
+            {
+                _httpClient = new HttpClient();
+            }
+
             _httpClient.DefaultRequestHeaders.Add("Device-Type", device.ToString());
             if (!string.IsNullOrWhiteSpace(customUserAgent))
             {
