@@ -40,7 +40,7 @@ namespace Bit.Core.Services
             {
                 throw new ArgumentException("Unsupported PBKDF2 algorithm.");
             }
-            return Task.FromResult(_cryptoPrimitiveService.Pbkdf2(password, salt, algorithm, iterations));
+            return _cryptoPrimitiveService.Pbkdf2(password, salt, algorithm, iterations);
         }
 
         public Task<byte[]> HashAsync(string value, CryptoHashAlgorithm algorithm)
