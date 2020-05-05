@@ -1,0 +1,45 @@
+﻿@page "/"
+@layout LoginLayout
+
+<h3>BW2 - Sign In</h3>
+<EditForm Model="this" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <InputText @bind-Value="Username" placeholder="Email" />
+    <InputText @bind-Value="Password" placeholder="Password" type="password" />
+    <button type="submit">Sign In</button>
+    <button @onclick="ShowPreferences">Preferences</button>
+
+</EditForm>
+@code {
+    [Required]
+    [EmailAddress]
+    public string Username { get; set; }
+    [Required]
+    [MinLength(8)]
+    public string Password { get; set; }
+
+    async Task OnValidSubmit()
+    {
+        await Login();
+    }
+}
+
+@*
+<h1>Hello, world!</h1>
+
+<button @onclick="Login">Login</button>
+<button @onclick="WhoAmI">Who Am I</button>
+
+@code {
+    async Task Login()
+    {
+        await Program.BW.Login("bwcli-testing@ezstest.com", "bwcli-testing0");
+    }
+
+    async Task WhoAmI()
+    {
+        await Program.BW.WhoAmI();
+    }
+}
+*@

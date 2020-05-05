@@ -1,0 +1,16 @@
+﻿@inject IModalService Modal
+ 
+<h3>Preferences</h3>
+
+<input type="text" placeholder="server" />
+
+<button @onclick="BlazoredModal.Close">Save</button>
+<button @onclick="BlazoredModal.Cancel">Cancel</button>
+
+@code {
+    [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; }
+
+    protected override void OnInitialized()
+    {
+    }
+}
