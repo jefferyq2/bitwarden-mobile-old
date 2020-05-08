@@ -21,7 +21,6 @@
 
         const bits = await crypto.subtle.deriveBits(pbkdf2Params, impKey, 256);
         const b64 = bw_web.fromBufferToB64(bits);
-        console.log("Generated bits: " + bits.byteLength + " ; " + b64);
         return b64;
     }
     , fromB64ToArray(str) {
@@ -39,5 +38,25 @@
             binary += String.fromCharCode(bytes[i]);
         }
         return window.btoa(binary);
+    }
+
+    , focusById: function (id) {
+        document.getElementById(id).focus();
+    }
+    , blurById: function (id) {
+        document.getElementById(id).blur();
+    }
+    , focusByRef: function (ref) {
+        ref.focus();
+    }
+    , focusByRef: function (ref) {
+        ref.blur();
+    }
+
+    // Enable bootstrap behavior
+    , applyTooltips: function () {
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
     }
 };

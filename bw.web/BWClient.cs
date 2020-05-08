@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Core.Abstractions;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Domain;
+using Bit.Core.Models.Request;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using bw.lib.Abstractions;
@@ -51,24 +52,120 @@ namespace bw.web
             ResolveServices();
         }
 
-        public async Task<bool> Login(string email, string masterPassword)
+        public async Task Register(string name, string email, string masterPassword)
         {
-            //try
+            var requ = new RegisterRequest
+            {
+                Name = name,
+                Email = email,
+
+            };
+            await _apiService.PostRegisterAsync(requ);
+        }
+
+        public Task SendHint(string email)
+        {
+            var requ = new PasswordHintRequest
+            {
+                Email = email,
+            };
+            return _apiService.PostPasswordHintAsync(requ);
+        }
+
+        public async Task<bool> SignIn(string email, string masterPassword)
+        {
+            var authResult = await _authService.LogInAsync(email, masterPassword);
+            var mfa = authResult.TwoFactor;
+            var mfaProviders = authResult.TwoFactorProviders;
+            return true;
+        }
+
+        public async Task SignOut()
+        {
+            // Based on:
+            //  bitwarden-mobile\src\App\App.xaml.cs#LogOutAsync
+            var userId = await _userService.GetUserIdAsync();
+            await Task.WhenAll(
+                _syncService.SetLastSyncAsync(DateTime.MinValue),
+                _tokenService.ClearTokenAsync(),
+                _cryptoService.ClearKeysAsync(),
+                _userService.ClearAsync(),
+                _settingsService.ClearAsync(userId),
+                _cipherService.ClearAsync(userId),
+                _folderService.ClearAsync(userId),
+                _collectionService.ClearAsync(userId),
+                _passwordGenerationService.ClearAsync(),
+                _lockService.ClearAsync(),
+                _stateService.PurgeAsync());
+            _lockService.FingerprintLocked = true;
+            _searchService.ClearIndex();
+            //_authService.LogOut(() =>
             //{
-                var authResult = await _authService.LogInAsync(email, masterPassword);
-                return true;
-            //}
-            //catch (ApiException ex)
-            //{
-            //    Console.Error.WriteLine("Login Failed:");
-            //    if (ex.Error != null)
+            //    Current.MainPage = new HomePage();
+            //    if (expired)
             //    {
-            //        Console.Error.WriteLine("Error Details:");
-            //        Console.Error.WriteLine(ex.Error.GetSingleMessage());
-            //        Console.Error.WriteLine(JsonSerializer.Serialize(ex.Error.ValidationErrors));
+            //        _platformUtilsService.ShowToast("warning", null, AppResources.LoginExpired);
             //    }
-            //    return false;
-            //}
+            //});
+        }
+
+        public Task<bool> IsAuthenticated()
+        {
+            return _userService.IsAuthenticatedAsync();
+        }
+
+        public Task<bool> IsLocked()
+        {
+            return _lockService.IsLockedAsync();
+        }
+
+        public Task Lock(bool allowSoftLock = false, bool userInitiated = false)
+        {
+            return _lockService.LockAsync(allowSoftLock, userInitiated);
+        }
+
+        public async Task Unlock(string password)
+        {
+            // From:
+            //  https://github.com/bitwarden/jslib/blob/0092aac275e8efca66838a8c266eec1d455883aa/src/angular/components/lock.component.ts#L99
+            //
+            // Also checkout:
+            //  bitwarden-mobile\src\App\Pages\Accounts\LockPageViewModel.cs
+            /*
+            const key = await this.cryptoService.makeKey(this.masterPassword, this.email, kdf, kdfIterations);
+            const keyHash = await this.cryptoService.hashPassword(this.masterPassword, key);
+            const storedKeyHash = await this.cryptoService.getKeyHash();
+
+            if (storedKeyHash != null && keyHash != null && storedKeyHash === keyHash) {
+                if (this.pinSet[0]) {
+                    const protectedPin = await this.storageService.get<string>(ConstantsService.protectedPin);
+                    const encKey = await this.cryptoService.getEncKey(key);
+                    const decPin = await this.cryptoService.decryptToUtf8(new CipherString(protectedPin), encKey);
+                    const pinKey = await this.cryptoService.makePinKey(decPin, this.email, kdf, kdfIterations);
+                    this.vaultTimeoutService.pinProtectedKey = await this.cryptoService.encrypt(key.key, pinKey);
+                }
+                this.setKeyAndContinue(key);
+            } else {
+                this.platformUtilsService.showToast('error', this.i18nService.t('errorOccurred'),
+                    this.i18nService.t('invalidMasterPassword'));
+            }
+            */
+            var email = await _userService.GetEmailAsync();
+            var kdf = await _userService.GetKdfAsync();
+            var iters = await _userService.GetKdfIterationsAsync();
+
+            var key = await _cryptoService.MakeKeyAsync(password, email, kdf, iters);
+            var keyHash = await _cryptoService.HashPasswordAsync(password, key);
+            var storedKeyHash = await _cryptoService.GetKeyHashAsync();
+
+            if (storedKeyHash != null && keyHash != null && storedKeyHash == keyHash)
+            {
+                await _cryptoService.SetKeyAsync(key);
+            }
+            else
+            {
+                throw new Exception("invalid master password");
+            }
         }
 
         public async Task WhoAmI()

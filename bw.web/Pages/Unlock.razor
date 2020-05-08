@@ -1,0 +1,31 @@
+﻿@page "/unlock"
+@layout NoMenuLayout
+<MatCard>
+    <div class="logo">
+        <MatIcon Icon="lock"></MatIcon>
+        <hr />
+        <h4>Unlock</h4>
+        Your vault is locked.<br />
+        Unlock it with your Master Password.<br />
+    </div>
+    <EditForm Model="@this" OnValidSubmit="@SubmitUnlock">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <fieldset>
+            <div class="form-group">
+                <MatTextField @bind-Value="@Password" Label="Master Password"
+                              Icon="@("lock" + (_passwordInputType == "password" ? "" : "_outline"))" IconTrailing="true"
+                              IconOnClick="() => Util.TogglePasswordInputType(ref _passwordInputType)"
+                              FullWidth="true" Required="true" Type="@_passwordInputType" tabindex="2"></MatTextField>
+            </div>
+            <div class="form-group">
+                <BWButton class="float-left" Style="width: 180px;" Type="submit"
+                          Raised="true" tabindex="3"
+                           Icon="@_submitIcon" IconClass="@_submitIconClass" Disabled="_submitDisabled">@_submitText</BWButton>
+                <MatButton class="float-right" Style="width: 180px;"
+                           OnClick="@SignOut"
+                           Outlined="true">Sign Out</MatButton>
+            </div>
+        </fieldset>
+    </EditForm>
+</MatCard>

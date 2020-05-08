@@ -1,16 +1,76 @@
 ﻿@page "/"
-@layout LoginLayout
+@layout NoMenuLayout
+@implements IDisposable
 
 <h3>BW2 - Sign In</h3>
-<EditForm Model="this" OnValidSubmit="OnValidSubmit">
+
+<EditForm EditContext="_editContext" OnValidSubmit="EditForm_OnValidSubmit">
     <DataAnnotationsValidator />
-    <ValidationSummary />
-    <InputText @bind-Value="Username" placeholder="Email" />
-    <InputText @bind-Value="Password" placeholder="Password" type="password" />
-    <button type="submit">Sign In</button>
-    <button @onclick="ShowPreferences">Preferences</button>
+    <ValidationSummary Model="this" />
+
+    <div class="card" style="width: 30rem;">
+        <div class="card-body">
+            This is a card
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="col-md mb-3"></div>
+        <div class="col-md mb-3 mb-3">
+            <div class="form-row">
+                <InputText @bind-Value="Username" placeholder="Email"
+                           class="form-control" aria-label="Username or Email" />
+                <ValidationMessage For="() => Username"
+                                   class="invalid-feedback" />
+            </div>
+            <div class="form-row mb-3">
+                <div class="input-group">
+                    <InputText @bind-Value="Password" placeholder="Password" type="password"
+                               class="form-control" aria-label="Password" />
+                    <div class="input-group-append">
+                        <button type="button" @onclick="SendHint" disabled="@(!_usernameValid)"
+                                title="Master Password hint" data-toggle="tooltip" data-placement="bottom"
+                                class="btn btn-outline-secondary">
+                            <span class="oi oi-lightbulb"></span>
+                        </button>
+                    </div>
+                </div>
+                <ValidationMessage For="() => Password"
+                                   class="invalid-feedback" />
+            </div>
+            <div class="form-row mb-3">
+                <button type="submit" disabled="@(!_formValid || _loginPending)"
+                        class="btn btn-primary" style="width: 10rem">
+                    @if (_loginPending)
+                    {
+                        @:<span class='icon-left oi oi-aperture icon-spinning'></span>Signing In...
+                    }
+                    else
+                    {
+                        @:<span class='icon-left oi oi-shield'></span>Sign In
+                    }
+                </button>
+            </div>
+            <div class="form-row">
+                <button disabled="@_loginPending" @onclick="ShowPreferences"
+                        class="btn btn-outline-primary">
+                    Preferences
+                </button>
+
+
+                <button disabled="@_loginPending" @onclick="Pending"
+                        class="btn btn-primary">
+                    @if (_loginPending)
+                    {<span class='fa-left fas fa-sync-alt spinning'></span>}
+                    Pending
+                </button>
+            </div>
+        </div>
+        <div class="col-md mb-3"></div>
+    </div>
 
 </EditForm>
+
 @code {
     [Required]
     [EmailAddress]
@@ -19,27 +79,54 @@
     [MinLength(8)]
     public string Password { get; set; }
 
-    async Task OnValidSubmit()
+    EditContext _editContext;
+    bool _usernameValid;
+    bool _formValid;
+    bool _loginPending;
+
+    protected override Task OnInitializedAsync()
     {
-        await Login();
+        _editContext = new EditContext(this);
+        _editContext.OnFieldChanged += EditContext_OnFieldChanged;
+        return base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("bw_web.applyTooltips");
+    }
+
+
+    private void EditContext_OnFieldChanged(object sender, FieldChangedEventArgs ev)
+    {
+        _formValid = !_editContext.Validate();
+        _usernameValid = _editContext.GetValidationMessages(() => Username).Count() == 0;
+
+        StateHasChanged();
+    }
+
+    async Task Pending()
+    {
+        _loginPending = true;
+        await Task.Delay(3000);
+        _loginPending = false;
+    }
+
+    async Task EditForm_OnValidSubmit()
+    {
+        try
+        {
+            _loginPending = true;
+            await Login();
+        }
+        finally
+        {
+            _loginPending = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= EditContext_OnFieldChanged;
     }
 }
-
-@*
-<h1>Hello, world!</h1>
-
-<button @onclick="Login">Login</button>
-<button @onclick="WhoAmI">Who Am I</button>
-
-@code {
-    async Task Login()
-    {
-        await Program.BW.Login("bwcli-testing@ezstest.com", "bwcli-testing0");
-    }
-
-    async Task WhoAmI()
-    {
-        await Program.BW.WhoAmI();
-    }
-}
-*@

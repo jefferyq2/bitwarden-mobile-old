@@ -1,0 +1,182 @@
+﻿@page "/register"
+
+@layout NoMenuLayout
+@inject NavigationManager navigationManager
+@inject IMatToaster matToaster
+
+@using Zxcvbn
+
+<MatCard>
+    <div class="logo">
+        <img src="images/new/blazor-shield-4.svg" /><br />bw.web
+        <br />
+        <h4>Create Account</h4>
+    </div>
+
+    <EditForm Model="@this" OnValidSubmit="@RegisterUser">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <fieldset>
+            <div class="form-group">
+                <MatTextField @bind-Value="@Email" Label="Email"
+                              Icon="mail_outline" IconTrailing="true"
+                              FullWidth="true" Required="true"
+                              HelperText="You'll use your email address to sign in."></MatTextField>
+            </div>
+            <div class="form-group">
+                <MatTextField @bind-Value="@FullName" Label="Your Name"
+                              Icon="person_outline" IconTrailing="true"
+                              FullWidth="true" Required="false"
+                              HelperText="What shall we call you?"></MatTextField>
+            </div>
+            <div class="form-group">
+                <BWTextFieldWithProgress @bind-Value="@Password1" Label="Master Password"
+                                         Icon="@("lock" + (_password1InputType == "password" ? "" : "_outline"))" IconTrailing="true"
+                                         IconOnClick="() => Util.TogglePasswordInputType(ref _password1InputType)"
+                                         FullWidth="true" Required="true" Type="@_password1InputType"
+                                         HelperText="The master password is the password you use to access your vault. It is very important that you do not forget your master password. There is no way to recover the password in the event that you forget it."
+                                         OnInput="OnPasswordInput" HelperTextPersistent="true"
+                                         ProgressColorLabel="@PasswordStrengthClass" ProgressPercent="@PasswordStrengthPct" ProgressLabel="@PasswordStrengthLabel">
+                </BWTextFieldWithProgress>
+            </div>
+            <div class="form-group">
+                <MatTextField @bind-Value="@Password2" Label="Confirm Master Password"
+                              Icon="@("lock" + (_password2InputType == "password" ? "" : "_outline"))" IconTrailing="true"
+                              IconOnClick="() => Util.TogglePasswordInputType(ref _password2InputType)"
+                              FullWidth="true" Required="true" Type="@_password2InputType"></MatTextField>
+            </div>
+            <div class="form-group">
+                <MatTextField @bind-Value="@Hint" Label="Master Password Hint (optional)"
+                              FullWidth="true" Required="false"
+                              HelperText="A hint can help you remember your password if you forget it."></MatTextField>
+            </div>
+            <div class="form-group d-flex justify-content-end">
+                <MatButton Type="submit" Raised="true">Create account</MatButton>
+            </div>
+            <hr />
+            <NavLink href="signin">
+                <h6 class="font-weight-normal text-center">Already have an account? Click here to Sign In</h6>
+            </NavLink>
+        </fieldset>
+    </EditForm>
+</MatCard>
+
+@code {
+    //RegisterDto registerParameters { get; set; } = new RegisterDto();
+
+    string FullName { get; set; }
+    [EmailAddress]
+    string Email { get; set; }
+    string Password1 { get; set; }
+    string Password2 { get; set; }
+    string Hint { get; set; }
+
+    string _password1InputType = "password";
+    string _password2InputType = "password";
+
+    string _passwordScored;
+    int _passwordScore;
+
+    Zxcvbn z = new Zxcvbn();
+    IEnumerable<string> globalUserInputs = new[]
+    {
+        "bitwarden", "bit", "warden",
+    };
+
+    protected override void OnInitialized()
+    {
+        // We do this one time to incur the startup time early
+        _ = z.EvaluatePassword("ignore", GetPasswordStrengthUserInput());
+        base.OnInitialized();
+    }
+
+    IEnumerable<string> GetPasswordStrengthUserInput()
+    {
+        var inputs = new List<string>(globalUserInputs);
+        var emailParts = Email?.Split("@.".ToCharArray());
+        if (emailParts?.Length > 0)
+        {
+            var re = new System.Text.RegularExpressions.Regex("[^A - Za - z0 - 9] ");
+            inputs.AddRange(emailParts.SelectMany(p =>
+                re.Split(p.ToLower()).Where(p => p.Trim().Length > 0)));
+        }
+        if (!string.IsNullOrEmpty(FullName))
+        {
+            inputs.AddRange(FullName.Trim().ToLower().Split(' '));
+        }
+        return inputs;
+    }
+
+    void OnPasswordInput(ChangeEventArgs ev)
+    {
+        _ = CheckPasswordStrength((string)ev.Value);
+    }
+
+    // We do this asynchronously to avoid any pauses or lags during user input
+    Task CheckPasswordStrength(string password)
+    {
+        if (!string.Equals(password, _passwordScored))
+        {
+            _passwordScored = password;
+            if (string.IsNullOrEmpty(password))
+            {
+                _passwordScore = 0;
+            }
+            else
+            {
+                var result = z.EvaluatePassword(password, GetPasswordStrengthUserInput());
+                _passwordScore = result.Score;
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    string PasswordStrengthClass => _passwordScore switch
+    {
+        4 => "success",
+        3 => "info",
+        2 => "warning",
+        _ when string.IsNullOrEmpty(_passwordScored) => "",
+        _ => "danger",
+    };
+
+    string PasswordStrengthLabel => _passwordScore switch
+    {
+        4 => "Strong",
+        3 => "Good",
+        _ when string.IsNullOrEmpty(_passwordScored) => "",
+        _ => "Weak",
+    };
+
+    int PasswordStrengthPct => _passwordScore switch
+    {
+        4 => 100,
+        3 => 75,
+        2 => 50,
+        1 => 25,
+        _ when _passwordScored?.Length > 0 => 10,
+        _ => 0,
+    };
+
+
+    async Task RegisterUser()
+    {
+        //try
+        //{
+        //    var response = await ((IdentityAuthenticationStateProvider)authStateProvider).Register(registerParameters);
+        //    if (response.StatusCode == Status200OK)
+        //    {
+        //        matToaster.Add("New User Email Verification was sent to: " + registerParameters.Email, MatToastType.Success, "User Creation Sucessful");
+        //        navigationManager.NavigateTo("");
+        //    }
+        //    else
+        //    {
+        //        matToaster.Add(response.Message, MatToastType.Danger, "User Creation Failed");
+        //    }
+        //}
+        //catch (Exception ex)
+        //{
+        //    matToaster.Add(ex.Message, MatToastType.Danger, "User Creation Failed");
+        //}
+    }
+}

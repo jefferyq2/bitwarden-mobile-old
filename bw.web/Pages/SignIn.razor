@@ -1,0 +1,69 @@
+﻿@page "/signin"
+@page "/signin/{returnurl}"
+@layout NoMenuLayout
+<MatCard>
+    <div class="hidden-mdc-down">
+        @*
+            <MatIconButton Icon="exit_to_app" Class="float-left" @onclick="GoBack" />
+            <MatIconButton Icon="home" Class="float-left" Link="/" />
+        *@
+    </div>
+
+    <div class="logo">
+        <a href="/" title="bw.web"><img src="images/new/blazor-shield-4.svg" title="bw.web" alt="bw.web" /><br />bw.web</a>
+        <br />
+        <h4>Sign In</h4>
+    </div>
+    <EditForm Model="@this" OnValidSubmit="@SubmitSignIn">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <fieldset>
+            <div class="form-group">
+                <MatTextField id="@EmailId" @bind-Value="@Email" Label="Email" Icon="mail_outline" IconTrailing="true"
+                              FullWidth="true" Required="true" tabindex="1"></MatTextField>
+            </div>
+            <div class="form-group">
+                <MatTextField @bind-Value="@Password" Label="Master Password"
+                              Icon="@("lock" + (_passwordInputType == "password" ? "" : "_outline"))" IconTrailing="true"
+                              IconOnClick="() => Util.TogglePasswordInputType(ref _passwordInputType)"
+                              FullWidth="true" Required="true" Type="@_passwordInputType" tabindex="2"></MatTextField>
+            </div>
+            <div class="form-group">
+                <BWButton class="float-right" Style="width: 180px;" Type="submit"
+                          Raised="true" tabindex="3"
+                           Icon="@_submitIcon" IconClass="@_submitIconClass" Disabled="_submitDisabled">@_submitText</BWButton>
+                <MatCheckbox @bind-Value="@RememberMe" class="filled-in chk-col-blue">Remember Me</MatCheckbox>
+            </div>
+            <hr />
+            <div>
+                <MatButton class="float-left" Style="width: 180px;"
+                           OnClick="@NavToRegister"
+                           Outlined="true">Create account</MatButton>
+                <MatButton class="float-right" Style="width: 180px;" Type="button"
+                           OnClick="@ShowPreferences"
+                           Outlined="true">Preferences</MatButton><br />
+            </div>
+        </fieldset>
+    </EditForm>
+</MatCard>
+<MatAccordion>
+    <MatExpansionPanel @bind-Expanded="@_forgotPasswordVisible">
+        <MatExpansionPanelSummary>
+            <MatExpansionPanelHeader>Forgot Password?</MatExpansionPanelHeader>
+            <MatExpansionPanelSubHeader></MatExpansionPanelSubHeader>
+        </MatExpansionPanelSummary>
+        <MatExpansionPanelDetails>
+            <EditForm Model="@this" OnValidSubmit="@SubmitPasswordHint">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <MatTextField @bind-Value="@HintEmail" Label="Email" Icon="mail_outline" IconTrailing="true" FullWidth="true" Required="true"></MatTextField>
+                </div>
+                <div class="form-group">
+                    <MatButton class="float-right" Type="submit" Raised="true">Send Me A Hint</MatButton>
+                </div>
+            </EditForm>
+        </MatExpansionPanelDetails>
+    </MatExpansionPanel>
+</MatAccordion>

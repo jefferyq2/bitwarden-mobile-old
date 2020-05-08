@@ -1,0 +1,40 @@
+﻿/* Borrowed from:
+ *  https://blog.jonblankenship.com/2018/10/19/adding-a-loading-spinner-to-a-button-with-blazor/
+ */
+.icon-left {
+    margin-right: 7px;
+}
+.icon-spinning {
+    animation: spin 1s infinite linear;
+    -webkit-animation: spin2 1s infinite linear;
+}
+
+@keyframes spin {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    75% {
+        transform: scale(1) rotate(-360deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(-360deg);
+    }
+}
+
+@-webkit-keyframes spin2 {
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+
+    75% {
+        -webkit-transform: rotate(-360deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(-360deg);
+    }
+}
+
+

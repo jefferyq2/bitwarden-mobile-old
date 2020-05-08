@@ -22,35 +22,63 @@ namespace bw.web.Pages
         [Inject] IModalService Modal { get; set; }
         [Inject] IToastService Toast { get; set; }
 
-        public async Task Login()
+        protected void ShowApiError(ApiException ex)
         {
-            if (App.BW == null)
+            Console.Error.WriteLine("Login Failed:");
+            if (ex.Error != null)
             {
-                await InitBW();
+                Toast.ShowError(ex.Error.GetSingleMessage(), "Login Error");
+                Console.Error.WriteLine("Error Details:");
+                Console.Error.WriteLine(ex.Error.GetSingleMessage());
+                Console.Error.WriteLine(JsonSerializer.Serialize(ex.Error.ValidationErrors));
             }
+            else
+            {
+                Toast.ShowError(ex.Message, "Login Error");
+                Console.WriteLine("Login Error");
+                Console.WriteLine(ex);
+            }
+        }
 
+        protected void ShowUnexpectedError(Exception ex)
+        {
+            Toast.ShowError(ex.Message, "Unexpected Login Error");
+            Console.WriteLine("Unexpected Login Error");
+            Console.WriteLine(ex);
+        }
+
+        public async Task SendHint()
+        {
             try
             {
-                await App.BW.Login(Username, Password);
+                var bw = App.BW;
+                await bw.SendHint(Username);
+                Toast.ShowSuccess("You should receive an email with your Master Password hint.");
             }
             catch (ApiException ex)
             {
-                Console.Error.WriteLine("Login Failed:");
-                if (ex.Error != null)
-                {
-                    Toast.ShowError(ex.Error.GetSingleMessage(), "Login Error");
-                    Console.Error.WriteLine("Error Details:");
-                    Console.Error.WriteLine(ex.Error.GetSingleMessage());
-                    Console.Error.WriteLine(JsonSerializer.Serialize(ex.Error.ValidationErrors));
-                }
-                else
-                {
-                    Toast.ShowError(ex.Message, "Login Error");
-                }
+                ShowApiError(ex);
             }
             catch (Exception ex)
             {
-                Toast.ShowError(ex.Message, "Unexpected Login Error");
+                ShowUnexpectedError(ex);
+            }
+        }
+
+        public async Task Login()
+        {
+            try
+            {
+                var bw = App.BW;
+                await bw.SignIn(Username, Password);
+            }
+            catch (ApiException ex)
+            {
+                ShowApiError(ex);
+            }
+            catch (Exception ex)
+            {
+                ShowUnexpectedError(ex);
             }
         }
 
@@ -63,33 +91,5 @@ namespace bw.web.Pages
                 Console.WriteLine("Saved");
         }
 
-        public async Task InitBW()
-        {
-            App.BW = new BWClient();
-            App.BW.CreateServiceResolver = (t, n) =>
-            {
-                if (t == typeof(ICryptoPrimitiveService))
-                {
-                    return new JSInteropCryptoPrimitiveService(JS);
-                }
-                if (t == typeof(IStorageService))
-                {
-                    if (n == "storageService")
-                    {
-                        return Storage;
-                    }
-                    else if (n == "secureStorageService")
-                    {
-                        return Storage;
-                    }
-                    else
-                    {
-                        throw new Exception("Unexpected storage service name: " + n);
-                    }
-                }
-                return null;
-            };
-            await App.BW.InitAsync();
-        }
     }
 }

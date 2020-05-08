@@ -1,0 +1,27 @@
+﻿@page "/vault"
+@page "/vault/{target}"
+@page "/vault/{target}/{parameter}"
+@layout MenuLayout
+<h3>Vault</h3>
+
+This is your vault.
+
+<div>
+    Authenticated?  @_isAuthenticated
+</div>
+
+<div>
+    Locked? @_isLocked
+</div>
+
+<div>
+    Showing from [@Target] with [@Parameter].
+</div>
+
+<div>
+    <button @onclick="Lock">Lock</button>
+</div>
+
+@code
+{
+}
